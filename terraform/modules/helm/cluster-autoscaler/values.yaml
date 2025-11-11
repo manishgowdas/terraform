@@ -1,0 +1,30 @@
+########################################
+# Cluster Autoscaler Helm Values
+########################################
+
+autoDiscovery:
+  clusterName: "dev-eks"   # Replace dynamically in tfvars if needed
+
+awsRegion: "ap-south-1"
+
+rbac:
+  serviceAccount:
+    create: true
+    name: cluster-autoscaler
+
+cloudProvider: aws
+
+extraArgs:
+  balance-similar-node-groups: "true"
+  skip-nodes-with-system-pods: "false"
+  skip-nodes-with-local-storage: "false"
+  expander: least-waste
+  scan-interval: 10s
+
+tolerations:
+  - key: "node-role.kubernetes.io/control-plane"
+    effect: NoSchedule
+
+image:
+  repository: registry.k8s.io/autoscaling/cluster-autoscaler
+  tag: v1.30.0
