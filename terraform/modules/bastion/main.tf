@@ -2,7 +2,9 @@
 # BASTION HOST MODULE
 ############################################
 
+############################################
 # Fetch latest Amazon Linux 2 AMI
+############################################
 data "aws_ami" "bastion" {
   most_recent = true
   filter {
@@ -13,9 +15,8 @@ data "aws_ami" "bastion" {
 }
 
 ############################################
-# SECURITY GROUP
+# Security Group
 ############################################
-
 resource "aws_security_group" "this" {
   name        = "${var.name}-sg"
   description = "Security group for Bastion Host"
@@ -45,7 +46,6 @@ resource "aws_security_group" "this" {
 ############################################
 # IAM ROLE (Optional for SSM)
 ############################################
-
 resource "aws_iam_role" "this" {
   count = var.enable_ssm ? 1 : 0
   name  = "${var.name}-role"
@@ -75,15 +75,60 @@ resource "aws_iam_instance_profile" "this" {
 }
 
 ############################################
-# EC2 INSTANCE
+# SSH Key Pair Handling (Safe Create or Reuse)
 ############################################
 
+locals {
+  bastion_pub_key_path = "${path.module}/public_keys/${var.ssh_key_name}.pub"
+  has_local_pub_key    = fileexists(local.bastion_pub_key_path)
+}
+
+# Generate a new key if no .pub file exists
+resource "tls_private_key" "generated" {
+  count     = local.has_local_pub_key ? 0 : 1
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Create or register the AWS key pair
+resource "aws_key_pair" "this" {
+  key_name = var.ssh_key_name
+
+  # ✅ Properly wrapped ternary for Terraform parser
+  public_key = (
+    local.has_local_pub_key
+    ? file(local.bastion_pub_key_path)
+    : tls_private_key.generated[0].public_key_openssh
+  )
+
+  lifecycle {
+    ignore_changes = [public_key]
+  }
+}
+
+# Save the private key locally if it was generated
+resource "local_file" "private_key" {
+  count    = local.has_local_pub_key ? 0 : 1
+  filename = "${path.module}/generated_keys/${var.ssh_key_name}.pem"
+  content  = tls_private_key.generated[0].private_key_pem
+
+  file_permission = "0400"
+}
+
+# Final effective key name
+locals {
+  effective_key_name = var.enable_ssm ? null : aws_key_pair.this.key_name
+}
+
+############################################
+# EC2 INSTANCE
+############################################
 resource "aws_instance" "this" {
   ami                         = data.aws_ami.bastion.id
   instance_type               = var.instance_type
   subnet_id                   = var.subnet_id
   vpc_security_group_ids      = [aws_security_group.this.id]
-  key_name                    = var.ssh_key_name != "" ? var.ssh_key_name : null
+  key_name                    = local.effective_key_name
   iam_instance_profile        = var.enable_ssm ? aws_iam_instance_profile.this[0].name : null
   associate_public_ip_address = var.associate_public_ip_address
 
@@ -96,3 +141,4 @@ resource "aws_instance" "this" {
 
   tags = merge({ Name = var.name }, var.tags)
 }
+

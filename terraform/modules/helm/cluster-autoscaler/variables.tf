@@ -19,3 +19,9 @@ variable "chart_version" {
   type        = string
   default     = "9.29.0"
 }
+variable "values" {
+  description = "Custom Helm values for Cluster Autoscaler"
+  type        = any
+  default     = {}
+}
+

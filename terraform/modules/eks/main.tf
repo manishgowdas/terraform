@@ -2,10 +2,6 @@
 # EKS - Flexible Multi-Cluster Creation
 ########################################
 
-locals {
-  eks_clusters = { for cluster in var.eks_clusters : cluster.name => cluster }
-}
-
 ########################################
 # EKS Cluster(s)
 ########################################
@@ -64,7 +60,15 @@ resource "aws_eks_node_group" "this" {
     ]
   }
 
-  tags = merge(each.value.tags, { NodeGroup = "${each.value.name}-ng" })
+  # ✅ Added autoscaler discovery tags
+  tags = merge(
+    each.value.tags,
+    {
+      NodeGroup                                      = "${each.value.name}-ng"
+      "k8s.io/cluster-autoscaler/enabled"            = "true"
+      "k8s.io/cluster-autoscaler/${each.value.name}" = "owned"
+    }
+  )
 
   depends_on = [
     aws_iam_role_policy_attachment.eks_node_AmazonEKSWorkerNodePolicy,
@@ -72,3 +76,4 @@ resource "aws_eks_node_group" "this" {
     aws_iam_role_policy_attachment.eks_node_AmazonEC2ContainerRegistryReadOnly
   ]
 }
+

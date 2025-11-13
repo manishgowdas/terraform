@@ -1,5 +1,9 @@
+########################################
+# NETWORKING MODULE VARIABLES
+########################################
+
 ############################
-# VPC Variables
+# VPC Configuration
 ############################
 
 variable "vpc_name" {
@@ -22,67 +26,60 @@ variable "availability_zones" {
 ############################
 
 variable "public_subnets" {
-  description = "List of CIDR blocks for public subnets"
+  description = "CIDR blocks for public subnets"
   type        = list(string)
 }
 
 variable "private_subnets" {
-  description = "List of CIDR blocks for private subnets"
+  description = "CIDR blocks for private subnets"
   type        = list(string)
 }
 
 ############################
-# Optional Names
+# Optional Resource Names
 ############################
 
 variable "igw_name" {
-  description = "Optional name for the Internet Gateway"
+  description = "Optional custom name for Internet Gateway"
   type        = string
   default     = ""
 }
 
 variable "nat_name" {
-  description = "Optional name for the NAT Gateway"
-  type        = string
-  default     = ""
-}
-
-variable "public_rt_name" {
-  description = "Optional name for the public route table"
-  type        = string
-  default     = ""
-}
-
-variable "private_rt_name" {
-  description = "Optional name for the private route table"
+  description = "Optional prefix name for NAT Gateway(s)"
   type        = string
   default     = ""
 }
 
 ############################
-# EKS Integration
+# EKS Tagging Support
 ############################
 
 variable "enable_eks" {
-  description = "Whether to enable EKS subnet tagging"
+  description = "Whether to tag subnets for EKS"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "cluster_name" {
-  description = "EKS cluster name for tagging"
+  description = "EKS cluster name (used for subnet tagging)"
   type        = string
   default     = ""
 }
 
 variable "extra_subnet_tags" {
-  description = "Map of additional subnet tags"
+  description = "Additional tags for subnets (merged with defaults)"
   type        = map(string)
   default     = {}
 }
 
+############################
+# Common Tags
+############################
+
 variable "tags" {
-  description = "Common tags applied to networking resources"
+  description = "Common tags applied to all networking resources"
   type        = map(string)
   default     = {}
 }
+

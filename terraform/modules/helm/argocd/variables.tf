@@ -19,3 +19,8 @@ variable "chart_version" {
   type        = string
   default     = "7.5.2"
 }
+variable "values" {
+  description = "Custom Helm values for ArgoCD"
+  type        = any
+  default     = {}
+}

@@ -1,42 +1,39 @@
-########################################
-# INPUT VARIABLES
-########################################
-
 variable "vpc_id" {
   description = "VPC ID where RDS will be created"
   type        = string
 }
 
 variable "env" {
-  description = "Environment name for resource naming"
-  type        = string
-}
-
-variable "app_sg_id" {
-  description = "Application Security Group ID that can access the RDS instance"
+  description = "Environment name (e.g. dev, prod)"
   type        = string
 }
 
 variable "db_subnets" {
-  description = "List of subnet definitions for RDS. Each element includes { cidr, az }"
+  description = "List of CIDR blocks and AZs for isolated RDS subnets"
   type = list(object({
     cidr = string
     az   = string
   }))
 }
 
+variable "app_sg_id" {
+  description = "Application SG ID allowed to access RDS"
+  type        = string
+  default     = ""
+}
+
 variable "db_engine" {
-  description = "RDS database engine (e.g., postgres, mysql)"
+  description = "Database engine (postgres, mysql)"
   type        = string
 }
 
 variable "db_engine_version" {
-  description = "RDS engine version"
+  description = "Database engine version"
   type        = string
 }
 
 variable "db_instance_class" {
-  description = "Instance class for RDS"
+  description = "RDS instance class"
   type        = string
 }
 
@@ -46,35 +43,41 @@ variable "db_allocated_storage" {
 }
 
 variable "db_storage_type" {
-  description = "Storage type (gp2, gp3, io1)"
+  description = "Storage type (gp3, gp2, io1)"
   type        = string
 }
 
 variable "db_username" {
-  description = "Master username for RDS"
+  description = "Admin username"
   type        = string
 }
 
 variable "db_password" {
-  description = "Master password for RDS (sensitive)"
+  description = "Admin password"
   type        = string
   sensitive   = true
 }
 
 variable "db_port" {
-  description = "Port number for database connection"
+  description = "DB port number"
   type        = number
-  default     = 5432
 }
 
 variable "db_multi_az" {
-  description = "Enable Multi-AZ RDS deployment"
+  description = "Enable Multi-AZ deployment"
   type        = bool
   default     = false
 }
 
 variable "db_deletion_protection" {
-  description = "Enable deletion protection for RDS instance"
+  description = "Prevent accidental deletion"
   type        = bool
   default     = false
 }
+
+variable "tags" {
+  description = "Common tags"
+  type        = map(string)
+  default     = {}
+}
+

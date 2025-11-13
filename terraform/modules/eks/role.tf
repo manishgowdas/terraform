@@ -2,9 +2,6 @@
 # IAM ROLES FOR MULTI-CLUSTER EKS MODULE
 ########################################
 
-locals {
-  eks_clusters = { for cluster in var.eks_clusters : cluster.name => cluster }
-}
 
 ########################################
 # EKS CLUSTER IAM ROLE
@@ -115,10 +112,13 @@ resource "aws_iam_policy" "cluster_autoscaler_policy" {
         Effect = "Allow",
         Action = [
           "autoscaling:DescribeAutoScalingGroups",
+          "autoscaling:DescribeLaunchConfigurations",
+          "autoscaling:DescribeTags",
           "autoscaling:DescribeAutoScalingInstances",
           "autoscaling:SetDesiredCapacity",
           "autoscaling:TerminateInstanceInAutoScalingGroup",
-          "ec2:DescribeInstanceTypes"
+          "ec2:DescribeInstanceTypes",
+          "ec2:DescribeLaunchTemplateVersions"
         ],
         Resource = "*"
       }

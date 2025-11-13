@@ -51,11 +51,11 @@ EOT
     name                       = string
     version                    = string
     subnet_ids                 = list(string)
-    cluster_security_group_ids  = list(string)
-    endpoint_private_access     = bool
-    endpoint_public_access      = bool
-    enable_addons               = bool
-    addons                      = map(string)
+    cluster_security_group_ids = list(string)
+    endpoint_private_access    = bool
+    endpoint_public_access     = bool
+    enable_addons              = bool
+    addons                     = map(string)
     node_groups = list(object({
       name             = string
       desired_capacity = number

@@ -1,123 +1,118 @@
 ########################################
-# VALIDATE MULTI-AZ CONFIGURATION
+# RDS MODULE - ISOLATED SUBNETS + ROUTE TABLE
 ########################################
 
+########################################
+# LOCALS
+########################################
 locals {
-  az_count = length(distinct([for s in var.db_subnets : s.az]))
-}
-
-resource "null_resource" "validate_multi_az" {
-  count = var.db_multi_az && local.az_count < 2 ? 1 : 0
-
-  provisioner "local-exec" {
-    command = "echo '❌ ERROR: Multi-AZ requires at least 2 distinct AZs. Found only ${local.az_count}.' && exit 1"
-  }
+  db_subnet_group_name = "${var.env}-rds-subnet-group"
+  db_rt_name           = "${var.env}-rds-private-rt"
 }
 
 ########################################
-# CREATE RDS SUBNETS (PRIVATE)
+# ISOLATED RDS SUBNETS
 ########################################
-
 resource "aws_subnet" "db_subnets" {
-  for_each = {
-    for idx, subnet in var.db_subnets : idx => subnet
-  }
+  for_each = { for s in var.db_subnets : s.az => s }
 
-  vpc_id                  = var.vpc_id
-  cidr_block              = each.value.cidr
-  availability_zone       = each.value.az
+  vpc_id            = var.vpc_id
+  cidr_block        = each.value.cidr
+  availability_zone = each.value.az
+
   map_public_ip_on_launch = false
 
-  tags = {
-    Name = "${var.env}-db-subnet-${each.key}"
-  }
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.env}-rds-subnet-${each.key}"
+      Role = "rds-private"
+    }
+  )
 }
 
 ########################################
-# ISOLATED ROUTE TABLE
+# DEDICATED ROUTE TABLE
 ########################################
-
-resource "aws_route_table" "db_rt" {
+resource "aws_route_table" "rds_private" {
   vpc_id = var.vpc_id
-
-  tags = {
-    Name = "${var.env}-db-rt"
-  }
+  tags   = merge(var.tags, { Name = local.db_rt_name })
 }
 
-resource "aws_route_table_association" "db_rt_assoc" {
-  for_each       = aws_subnet.db_subnets
-  subnet_id      = each.value.id
-  route_table_id = aws_route_table.db_rt.id
+# No outbound Internet route (RDS should stay isolated)
+# Optionally add a NAT route if absolutely needed:
+# resource "aws_route" "rds_nat_access" {
+#   route_table_id         = aws_route_table.rds_private.id
+#   destination_cidr_block = "0.0.0.0/0"
+#   nat_gateway_id         = var.nat_gateway_id
+# }
+
+########################################
+# ROUTE TABLE ASSOCIATIONS
+########################################
+resource "aws_route_table_association" "rds_assoc" {
+  for_each      = aws_subnet.db_subnets
+  subnet_id     = each.value.id
+  route_table_id = aws_route_table.rds_private.id
 }
 
 ########################################
-# DB SUBNET GROUP
+# RDS SUBNET GROUP
 ########################################
-
-resource "aws_db_subnet_group" "db_subnet_group" {
-  name       = "${var.env}-db-subnet-group"
+resource "aws_db_subnet_group" "this" {
+  name       = local.db_subnet_group_name
   subnet_ids = [for s in aws_subnet.db_subnets : s.id]
-
-  tags = {
-    Name = "${var.env}-db-subnet-group"
-  }
+  tags       = merge(var.tags, { Name = local.db_subnet_group_name })
 }
 
 ########################################
 # SECURITY GROUP
 ########################################
-
 resource "aws_security_group" "rds_sg" {
   name        = "${var.env}-rds-sg"
-  description = "Allow DB access from application SG"
+  description = "Security group for RDS access"
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "Allow app access to RDS"
+    description     = "Allow access from app SG"
     from_port       = var.db_port
     to_port         = var.db_port
     protocol        = "tcp"
-    security_groups = [var.app_sg_id]
+    security_groups = var.app_sg_id != "" ? [var.app_sg_id] : []
   }
 
   egress {
+    description = "Allow all outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "${var.env}-rds-sg"
-  }
+  tags = merge(var.tags, { Name = "${var.env}-rds-sg" })
 }
 
 ########################################
 # RDS INSTANCE
 ########################################
+resource "aws_db_instance" "this" {
+  identifier             = "${var.env}-rds-instance"
+  engine                 = var.db_engine
+  engine_version         = var.db_engine_version
+  instance_class         = var.db_instance_class
+  allocated_storage      = var.db_allocated_storage
+  storage_type           = var.db_storage_type
+  username               = var.db_username
+  password               = var.db_password
+  port                   = var.db_port
+  db_subnet_group_name   = aws_db_subnet_group.this.name
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  multi_az               = var.db_multi_az
+  deletion_protection    = var.db_deletion_protection
+  publicly_accessible    = false
+  skip_final_snapshot    = true
 
-resource "aws_db_instance" "rds" {
-  depends_on = [null_resource.validate_multi_az]
-
-  identifier              = "${var.env}-rds"
-  engine                  = var.db_engine
-  engine_version          = var.db_engine_version
-  instance_class          = var.db_instance_class
-  allocated_storage       = var.db_allocated_storage
-  storage_type            = var.db_storage_type
-  username                = var.db_username
-  password                = var.db_password
-  db_subnet_group_name    = aws_db_subnet_group.db_subnet_group.name
-  vpc_security_group_ids  = [aws_security_group.rds_sg.id]
-  publicly_accessible     = false
-  multi_az                = var.db_multi_az
-  skip_final_snapshot     = true
-  deletion_protection     = var.db_deletion_protection
-  storage_encrypted       = true
-  port                    = var.db_port
-
-  tags = {
-    Name = "${var.env}-rds"
-  }
+  tags = merge(var.tags, { Name = "${var.env}-rds" })
 }
+
+

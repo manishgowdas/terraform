@@ -1,7 +1,19 @@
+########################################
+# Terraform Provider Requirements
+########################################
+terraform {
+  required_providers {
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.17"
+    }
+  }
+}
+
+
 ##########################################
 # Metrics Server Helm Installation
 ##########################################
-
 resource "helm_release" "metric_server" {
   name             = var.name
   repository       = var.repository
@@ -16,3 +28,4 @@ resource "helm_release" "metric_server" {
   wait    = true
   timeout = 300
 }
+

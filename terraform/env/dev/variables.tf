@@ -80,9 +80,8 @@ variable "enable_eks" {
 }
 
 variable "cluster_name" {
-  description = "EKS Cluster name for subnet tagging (if applicable)"
+  description = "EKS Cluster name for subnet tagging"
   type        = string
-  default     = ""
 }
 
 variable "extra_subnet_tags" {
@@ -99,18 +98,6 @@ variable "name" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "VPC ID for the Bastion host"
-  type        = string
-  default     = ""
-}
-
-variable "subnet_id" {
-  description = "Subnet ID for Bastion instance"
-  type        = string
-  default     = ""
-}
-
 variable "instance_type" {
   description = "Bastion EC2 instance type"
   type        = string
@@ -120,7 +107,6 @@ variable "instance_type" {
 variable "ssh_key_name" {
   description = "SSH Key Pair name for Bastion access"
   type        = string
-  default     = ""
 }
 
 variable "allowed_ssh_cidrs" {
@@ -153,42 +139,80 @@ variable "user_data" {
   default     = ""
 }
 
+variable "bastion_tags" {
+  description = "Additional tags for Bastion instance"
+  type        = map(string)
+  default     = {}
+}
+
 ############################
-# Multi-EKS Configuration
+# EKS
 ############################
-variable "eks_clusters" {
-  description = "List of EKS clusters to deploy, each with its configuration"
+variable "cluster_version" {
+  description = "EKS Kubernetes version"
+  type        = string
+}
+
+variable "cluster_security_group_ids" {
+  description = "Security group IDs for EKS control plane"
+  type        = list(string)
+  default     = []
+}
+
+variable "endpoint_private_access" {
+  description = "Whether EKS API endpoint is private"
+  type        = bool
+  default     = false
+}
+
+variable "endpoint_public_access" {
+  description = "Whether EKS API endpoint is public"
+  type        = bool
+  default     = true
+}
+
+variable "cluster_authentication_mode" {
+  description = "Cluster authentication mode"
+  type        = string
+  default     = "API_AND_CONFIG_MAP"
+}
+
+variable "bootstrap_cluster_creator_admin_permissions" {
+  description = "Grant creator admin permissions to cluster"
+  type        = bool
+  default     = true
+}
+
+variable "node_groups" {
+  description = "EKS Node group configuration list"
   type = list(object({
-    name                                   = string
-    version                                = string
-    cluster_security_group_ids             = optional(list(string), [])
-    endpoint_private_access                = optional(bool, false)
-    endpoint_public_access                 = optional(bool, true)
-    cluster_authentication_mode            = optional(string, "API_AND_CONFIG_MAP")
-    bootstrap_cluster_creator_admin_permissions = optional(bool, true)
-    node_groups = optional(list(object({
-      name                       = string
-      desired_capacity           = number
-      min_size                   = number
-      max_size                   = number
-      instance_types             = list(string)
-      key_name                   = string
-      bastion_security_group_ids = optional(list(string), [])
-      capacity_type              = optional(string)
-      enable_update_config       = optional(bool, false)
-      max_unavailable_percentage = optional(number, 0)
-      labels                     = optional(map(string), {})
-    })), [])
-    enable_addons = optional(bool, true)
-    addons = optional(map(string), {
-      vpc_cni        = "v1.18.1-eksbuild.1"
-      coredns        = "v1.11.1-eksbuild.3"
-      kube_proxy     = "v1.30.0-eksbuild.1"
-      pod_identity   = "v1.2.0-eksbuild.1"
-      ebs_csi_driver = "v1.31.0-eksbuild.1"
-    })
-    tags = optional(map(string), {})
+    name                       = string
+    desired_capacity           = number
+    min_size                   = number
+    max_size                   = number
+    instance_types             = list(string)
+    key_name                   = string
+    bastion_security_group_ids = list(string)
+    capacity_type              = string
+    enable_update_config       = optional(bool, false)
+    max_unavailable_percentage = optional(number, 0)
+    labels                     = optional(map(string), {})
+    prevent_destroy            = optional(bool, false)
+    ignore_changes             = optional(list(string), [])
   }))
+  default = []
+}
+
+variable "enable_addons" {
+  description = "Enable or disable EKS addons"
+  type        = bool
+  default     = true
+}
+
+variable "addons" {
+  description = "Map of EKS addons and their versions"
+  type        = map(string)
+  default     = {}
 }
 
 ############################
@@ -206,7 +230,7 @@ variable "app_sg_id" {
 }
 
 variable "db_subnets" {
-  description = "Subnet definitions for RDS (list of cidr/az)"
+  description = "Subnet definitions for RDS"
   type = list(object({
     cidr = string
     az   = string
@@ -305,8 +329,15 @@ variable "bucket_policy" {
 ############################
 # Helm Deployments
 ############################
+variable "helm_namespace" {
+  description = "Default namespace for Helm releases"
+  type        = string
+  default     = "kube-system"
+}
+
+# --- Metrics Server ---
 variable "metric_server_name" {
-  description = "Helm release name for metrics-server"
+  description = "Name of the metrics-server Helm release"
   type        = string
 }
 
@@ -316,25 +347,28 @@ variable "metric_server_repository" {
 }
 
 variable "metric_server_chart" {
-  description = "Chart name for metrics-server"
+  description = "Name of the metrics-server chart"
   type        = string
 }
 
-variable "metric_server_version" {
-  description = "Version of the metrics-server Helm chart"
+variable "metric_server_chart_version" {
+  description = "Version of the metrics-server chart"
   type        = string
 }
 
 variable "metric_server_namespace" {
-  description = "Namespace for metrics-server deployment"
+  description = "Namespace for metrics-server"
   type        = string
+  default     = "kube-system"
 }
 
 variable "metric_server_create_namespace" {
-  description = "Whether to create namespace for metrics-server"
+  description = "Whether to create the namespace for metrics-server"
   type        = bool
+  default     = false
 }
 
+# --- Cluster Autoscaler ---
 variable "cluster_autoscaler_helm_name" {
   description = "Helm release name for cluster autoscaler"
   type        = string
@@ -343,6 +377,7 @@ variable "cluster_autoscaler_helm_name" {
 variable "cluster_autoscaler_namespace" {
   description = "Namespace for cluster autoscaler"
   type        = string
+  default     = "kube-system"
 }
 
 variable "cluster_autoscaler_chart_version" {
@@ -350,6 +385,13 @@ variable "cluster_autoscaler_chart_version" {
   type        = string
 }
 
+variable "autoscaler_values" {
+  description = "Values for the cluster autoscaler Helm release"
+  type        = any
+  default     = {}
+}
+
+# --- ArgoCD ---
 variable "argocd_helm_name" {
   description = "Helm release name for ArgoCD"
   type        = string
@@ -358,9 +400,17 @@ variable "argocd_helm_name" {
 variable "argocd_namespace" {
   description = "Namespace for ArgoCD"
   type        = string
+  default     = "argocd"
 }
 
 variable "argocd_chart_version" {
   description = "Chart version for ArgoCD"
   type        = string
 }
+
+variable "argocd_values" {
+  description = "Custom values for ArgoCD Helm chart"
+  type        = any
+  default     = {}
+}
+

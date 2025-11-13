@@ -1,4 +1,17 @@
 ########################################
+# Terraform Provider Requirements
+########################################
+terraform {
+  required_providers {
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.17"
+    }
+  }
+}
+
+
+########################################
 # ArgoCD Helm Chart Installation
 ########################################
 
@@ -10,12 +23,10 @@ resource "helm_release" "argocd" {
   version          = var.chart_version
   create_namespace = true
 
-  # Apply Helm values from local file
-  values = [
-    file("${path.module}/values.yaml")
-  ]
+  values = [yamlencode(var.values)]
 
   wait            = true
   cleanup_on_fail = true
   timeout         = 600
 }
+

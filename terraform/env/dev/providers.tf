@@ -2,40 +2,100 @@
 # Terraform Provider Configuration
 ########################################
 
-# --- AWS Provider ---
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.20"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.38"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.17"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.5"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.2"
+    }
+  }
+}
+
+########################################
+# AWS Provider
+########################################
+
 provider "aws" {
   region  = var.region
   profile = var.profile
 }
 
-# --- EKS Data Sources ---
-# Used by both Kubernetes & Helm providers
+########################################
+# EKS Data Sources (Safe Bootstrap)
+########################################
+
+locals {
+  primary_cluster_name = try(var.cluster_name, "dev-eks")
+}
+
+# Only query the EKS cluster after it's created
 data "aws_eks_cluster" "eks" {
-  name = var.cluster_name
+  count      = can(module.eks.cluster_names[0]) ? 1 : 0
+  name       = can(module.eks.cluster_names[0]) ? module.eks.cluster_names[0] : local.primary_cluster_name
+  depends_on = [module.eks]
 }
 
 data "aws_eks_cluster_auth" "eks" {
-  name = var.cluster_name
+  count      = length(data.aws_eks_cluster.eks) > 0 ? 1 : 0
+  name       = try(module.eks.cluster_names[0], local.primary_cluster_name)
+  depends_on = [module.eks]
 }
 
-# --- Kubernetes Provider ---
+########################################
+# Kubernetes Provider (Lazy Load)
+########################################
+
 provider "kubernetes" {
-  host                   = data.aws_eks_cluster.eks.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.eks.certificate_authority[0].data)
-  token                  = data.aws_eks_cluster_auth.eks.token
+  alias = "eks"
+
+  host = try(data.aws_eks_cluster.eks[0].endpoint, "")
+  cluster_ca_certificate = try(
+    base64decode(data.aws_eks_cluster.eks[0].certificate_authority[0].data),
+    ""
+  )
+  token = try(data.aws_eks_cluster_auth.eks[0].token, "")
+
+  # Avoid reading local kubeconfig
+  load_config_file = false
 }
 
-# --- Helm Provider ---
+########################################
+# Helm Provider (Lazy Load)
+########################################
+
 provider "helm" {
+  alias = "eks"
+
   kubernetes {
-    host                   = data.aws_eks_cluster.eks.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.eks.certificate_authority[0].data)
-    token                  = data.aws_eks_cluster_auth.eks.token
+    host = try(data.aws_eks_cluster.eks[0].endpoint, "")
+    cluster_ca_certificate = try(
+      base64decode(data.aws_eks_cluster.eks[0].certificate_authority[0].data),
+      ""
+    )
+    token = try(data.aws_eks_cluster_auth.eks[0].token, "")
   }
 }
 
-# --- Local Provider ---
-provider "local" {}
+########################################
+# Local & Null Providers
+########################################
 
-# --- Null Provider ---
+provider "local" {}
 provider "null" {}
+

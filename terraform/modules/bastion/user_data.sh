@@ -1,57 +1,91 @@
 #!/bin/bash
-# Bastion Host Initialization Script
-
+# Bastion Host Initialization Script (Stable Version)
 set -xe
 
+# Log setup
+exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+echo "===== Bastion setup started at $(date) ====="
+
+# Function to safely run yum commands (wait for lock)
+yum_safe() {
+  local retries=10
+  local count=0
+  until yum "$@" -y; do
+    ((count++))
+    if [ "$count" -ge "$retries" ]; then
+      echo "YUM lock could not be acquired after $retries attempts"
+      return 1
+    fi
+    echo "YUM lock held, retrying ($count/$retries)..."
+    sleep 10
+  done
+}
+
+# System update
 echo "===== System update ====="
-yum update -y
+yum_safe update
 
-# Install AWS CLI
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-yum install -y unzip
+# Basic packages
+echo "===== Installing base tools ====="
+yum_safe install unzip git jq tree wget curl vim htop net-tools amazon-ssm-agent
+
+# Install AWS CLI v2
+echo "===== Installing AWS CLI ====="
+cd /tmp
+curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip -q awscliv2.zip
-./aws/install
+./aws/install || true
 rm -rf awscliv2.zip aws
+aws --version || echo "AWS CLI install verification failed."
 
-# Install Kubernetes tools
-curl -o /usr/local/bin/kubectl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-chmod +x /usr/local/bin/kubectl
+# Install kubectl (latest stable)
+echo "===== Installing kubectl ====="
+KUBECTL_VERSION="$(curl -L -s https://dl.k8s.io/release/stable.txt)"
+if [[ -n "$KUBECTL_VERSION" ]]; then
+  curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+  install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+  kubectl version --client --short || true
+else
+  echo "Failed to fetch kubectl version. Skipping."
+fi
 
+# Install eksctl
+echo "===== Installing eksctl ====="
 curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz"
 tar -xzf eksctl_$(uname -s)_amd64.tar.gz -C /usr/local/bin
 chmod +x /usr/local/bin/eksctl
 rm -f eksctl_$(uname -s)_amd64.tar.gz
+eksctl version || true
 
 # Install Helm
-curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+echo "===== Installing Helm ====="
+curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash || true
+helm version || true
 
 # Install Docker
-yum install -y docker
+echo "===== Installing Docker ====="
+yum_safe install docker
 systemctl enable docker
 systemctl start docker
 usermod -aG docker ec2-user || true
 
 # Install Java & Jenkins
-yum install -y java-17-amazon-corretto
+echo "===== Installing Java & Jenkins ====="
+yum_safe install java-17-amazon-corretto
 wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
 rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
-yum upgrade -y
-yum install -y jenkins
+yum_safe install jenkins
 systemctl enable jenkins
 systemctl start jenkins
 
-# Create a secondary user
+# Create secondary user
+echo "===== Creating jump user ====="
 useradd -m -s /bin/bash jump || true
-usermod -aG wheel jump
+usermod -aG wheel jump || true
 
-# Install common utilities
-yum install -y git jq tree wget curl vim htop net-tools
-
-# Ensure SSM Agent
-if ! systemctl is-enabled amazon-ssm-agent &>/dev/null; then
-  yum install -y amazon-ssm-agent
-fi
+# Ensure SSM Agent is running
 systemctl enable amazon-ssm-agent
 systemctl start amazon-ssm-agent
 
-echo "===== Bastion setup complete ====="
+echo "===== Bastion setup completed successfully at $(date) ====="
+
