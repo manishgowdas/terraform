@@ -31,7 +31,7 @@ public_subnets  = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnets = ["10.0.3.0/24", "10.0.4.0/24"]
 
 
-igw_name        = "dev-vpc-igw"
+igw_name        = "dev-vpc-igw1"
 nat_name        = "dev-nat"
 public_rt_name  = "dev-public-rt"
 private_rt_name = "dev-private-rt"
