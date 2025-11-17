@@ -13,6 +13,6 @@ terraform {
     # 🔹 AWS region where the S3 bucket is created
     region = "us-east-1"
 
-    use_lockfile = true
+   # use_lockfile = true
   }
 }
