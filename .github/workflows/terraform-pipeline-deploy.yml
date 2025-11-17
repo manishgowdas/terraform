@@ -1,5 +1,5 @@
-name: Terraform Pipeline
-
+name: Terraform Pipeline deploy
+environment: dev
 on:
   push:
     branches: [ main ]
