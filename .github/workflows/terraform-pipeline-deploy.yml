@@ -4,8 +4,8 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'terraform/env/dev/**.tf'
-      - 'terraform/env/dev/**.tfvars'
+      - 'terraform/env/**.tf'
+      - 'terraform/env/**.tfvars'
       - 'terraform/modules/**.tf'
       - 'terraform/modules/**.yaml'
   pull_request:
@@ -37,20 +37,20 @@ jobs:
           terraform_version: 1.8.5   # You can pick your preferred version
 
       - name: Terraform Init
-        working-directory: terraform/env
+        working-directory: terraform/env/dev
         run: terraform init -input=false
 
       - name: Terraform Format Check
-        working-directory: terraform/env
+        working-directory: terraform/env/dev
         run: terraform fmt -check
 
       - name: Terraform Validate
-        working-directory: terraform/env
+        working-directory: terraform/env/dev
         run: terraform validate
 
       - name: Terraform Plan
         id: plan
-        working-directory: terraform/env
+        working-directory: terraform/env/dev
         run: terraform plan -no-color -out=tfplan.out
 
       - name: Upload Plan
@@ -61,5 +61,5 @@ jobs:
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
-        working-directory: terraform/env
+        working-directory: terraform/env/dev
         run: terraform apply -auto-approve tfplan.out
