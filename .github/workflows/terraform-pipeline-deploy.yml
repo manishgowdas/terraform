@@ -57,7 +57,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
-          path: terraform/env/tfplan.out
+          path: terraform/env/dev/tfplan.out
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
