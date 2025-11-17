@@ -6,11 +6,13 @@ on:
       - 'terraform/env/**.tf'
       - 'terraform/env/**.tfvars'
       - 'terraform/modules/**.tf'
+      - 'terraform/modules/**.yaml'
   pull_request:
     paths:
       - 'terraform/env/**.tf'
       - 'terraform/env/**.tfvars'
       - 'terraform/modules/**.tf'
+      - 'terraform/modules/**.yaml'
 
 jobs:
   terraform:
