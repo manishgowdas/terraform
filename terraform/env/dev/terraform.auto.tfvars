@@ -29,7 +29,7 @@ availability_zones = ["ap-south-1a", "ap-south-1b"]
 public_subnets  = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnets = ["10.0.3.0/24", "10.0.4.0/24"]
 
-igw_name        = "myigw"
+igw_name        = ""
 nat_name        = ""
 public_rt_name  = ""
 private_rt_name = ""
