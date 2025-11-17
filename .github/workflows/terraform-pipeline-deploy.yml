@@ -4,10 +4,10 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'terraform/env/**.tf'
-      - 'terraform/env/**.tfvars'
-      - 'terraform/modules/**.tf'
-      - 'terraform/modules/**.yaml'
+      - 'terraform/env/dev/**.tf'
+      - 'terraform/env/dev/**.tfvars'
+      - 'terraform/modules/dev/**.tf'
+      - 'terraform/modules/dev/**.yaml'
   pull_request:
     paths:
       - 'terraform/env/**.tf'
