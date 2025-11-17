@@ -30,17 +30,11 @@ availability_zones = ["ap-south-1a", "ap-south-1b"]
 public_subnets  = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnets = ["10.0.3.0/24", "10.0.4.0/24"]
 
-<<<<<<< HEAD
-igw_name        = "myigw"
-nat_name        = ""
-public_rt_name  = ""
-private_rt_name = ""
-=======
+
 igw_name        = "dev-vpc-igw"
 nat_name        = "dev-nat"
 public_rt_name  = "dev-public-rt"
 private_rt_name = "dev-private-rt"
->>>>>>> a962888 (updated terraform scripts)
 
 enable_eks        = true
 extra_subnet_tags = {}
