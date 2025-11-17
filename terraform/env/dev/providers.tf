@@ -31,10 +31,10 @@
 ## AWS Provider
 #########################################
 #
-#provider "aws" {
-#  region  = var.region
-#  profile = var.profile
-#}
+provider "aws" {
+  region  = var.region
+  profile = var.profile
+}
 #
 #########################################
 ## EKS Data Sources (Safe Bootstrap)

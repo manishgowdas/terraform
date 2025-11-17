@@ -4,21 +4,21 @@
 # ########################################
 # # NETWORKING
 # ########################################
- module "networking" {
-   source             = "../../modules/networking"
-   vpc_name           = var.vpc_name
-   vpc_cidr           = var.vpc_cidr
-   availability_zones = var.availability_zones
-   public_subnets     = var.public_subnets
-   private_subnets    = var.private_subnets
+module "networking" {
+  source             = "../../modules/networking"
+  vpc_name           = var.vpc_name
+  vpc_cidr           = var.vpc_cidr
+  availability_zones = var.availability_zones
+  public_subnets     = var.public_subnets
+  private_subnets    = var.private_subnets
 
-   igw_name          = var.igw_name
-   nat_name          = var.nat_name
-   enable_eks        = var.enable_eks
-   cluster_name      = var.cluster_name
-   extra_subnet_tags = var.extra_subnet_tags
-   tags              = var.tags
- }
+  igw_name          = var.igw_name
+  nat_name          = var.nat_name
+  enable_eks        = var.enable_eks
+  cluster_name      = var.cluster_name
+  extra_subnet_tags = var.extra_subnet_tags
+  tags              = var.tags
+}
 #
 # ########################################
 # # BASTION HOST
