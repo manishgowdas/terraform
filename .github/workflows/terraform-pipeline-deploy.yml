@@ -6,8 +6,8 @@ on:
     paths:
       - 'terraform/env/dev/**.tf'
       - 'terraform/env/dev/**.tfvars'
-      - 'terraform/modules/dev/**.tf'
-      - 'terraform/modules/dev/**.yaml'
+      - 'terraform/modules/**.tf'
+      - 'terraform/modules/**.yaml'
   pull_request:
     paths:
       - 'terraform/env/**.tf'
